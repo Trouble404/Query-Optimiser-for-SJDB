@@ -335,12 +335,12 @@ select col_a from t_a where col_b > 100;
 
 ## 等价谓词重写
 
-![image]()
+![image](https://raw.githubusercontent.com/Trouble404/Query-Optimiser-for-SJDB/master/readme_pic/1.PNG)
 
 
 ## 条件简化
 
-![image]()
+![image](https://raw.githubusercontent.com/Trouble404/Query-Optimiser-for-SJDB/master/readme_pic/2.PNG)
 
 ## 外连接消除
 
