@@ -31,6 +31,8 @@ public class Estimator implements PlanVisitor {
 		totalCost += output.getTupleCount();
 	}
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	/* 
 	 * T(πA(R)) = T(R)
 	 *
@@ -39,9 +41,11 @@ public class Estimator implements PlanVisitor {
 	public void visit(Project op) {
 		
 		// Obtain output relation from given input relation
-		Relation input = op.getInput().getOutput(); // Return the single child operator of this operator, Return the relation produced by this operator as output
-		Relation output = new Relation(input.getTupleCount()); // Return the tuple count for this relation
-		
+		Relation input;
+		Relation output;
+		input = op.getInput().getOutput(); // Return the single child operator of this operator, Return the relation produced by this operator as output
+		output = new Relation(input.getTupleCount()); // Return the tuple count for this relation
+
 		// Add an attribute to this relation when the list of attributes contained in this relation is equal to the attributes projected by this operator
 		for(Attribute attribute1 : op.getAttributes()){ // Return the list of attributes projected by this operator
 			for (Attribute attribute2 : input.getAttributes()) { // Return the list of attributes contained in this relation
@@ -56,62 +60,80 @@ public class Estimator implements PlanVisitor {
 		totalCost += output.getTupleCount();
 	}
 	
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	/* 
+	 * For predicates of the form attr=val:
+	 * T(σA=c(R)) = T(R)/V(R,A), V(σA=c(R), A) = 1
+	 *
+	 * For predicates of the form attr=attr:
+	 * T(σA=B(R)) = T(R)/max(V(R,A),V(R,B)), V(σA=B(R), A) = V(σA=B(R), B) = min(V(R, A), V(R, B)
+	 */
 	public void visit(Select op) {
 		
-		Predicate p = op.getPredicate(); // the predicate
-		Attribute attr_left = new Attribute(p.getLeftAttribute().getName()); // left attr != null
-		
-		// the new attributes from select predicate with new value counts
-		Attribute output_left_attr = null;
-		
-		// get the input relation, which is the output of the input operator tree
-		Relation input = op.getInput().getOutput();
+		Relation input;
 		Relation output;
+		Predicate predicate;
+		Attribute left;
+		Attribute right;
+		int left_val;
+		int right_val;
+		int val_count;
 		
-		// find and fill in the right left attribute value count
-		for(Attribute attr_found : input.getAttributes()){
-			if (attr_found.equals(attr_left)) attr_left = new Attribute(attr_found.getName(), attr_found.getValueCount());
-		}
+		left = null;
+		right = null;
+
+		predicate = op.getPredicate();
+
+		input = op.getInput().getOutput();
+		left = input.getAttribute(predicate.getLeftAttribute());
+		left_val = left.getValueCount();
 		
-		if(p.equalsValue()) {
-			// attr = val
-			output = new Relation(input.getTupleCount()/attr_left.getValueCount());
-			output_left_attr = new Attribute(attr_left.getName(), Math.min(1, output.getTupleCount()));
 		
-			for (Attribute attr : input.getAttributes()){
-				if (!attr.equals(attr_left)) {
-					output.addAttribute(new Attribute(attr));
-				}
-			}
+		/*For predicates of the form attr=val:*/
+		if(predicate.equalsValue()) {
 			
-			// add left attr always
-			output.addAttribute(output_left_attr);
+			int Tr; 
+			int Vr;
+			Tr = input.getTupleCount();
+			Vr = left_val;
+
+			output = new Relation(Tr/Vr); // T(σA=c(R)) = T(R)/V(R,A)
+			val_count = 1; // V(σA=c(R), A) = 1
+
+		/* For predicates of the form attr=attr: */
 		} else {
-			// attr = attr
-			Attribute attr_right = new Attribute(p.getRightAttribute().getName()); // right != null
-			output = new Relation(input.getTupleCount()/Math.max(attr_left.getValueCount(), attr_right.getValueCount()));
-			
-			for(Attribute attr_found : input.getAttributes()){
-				if (attr_found.equals(attr_right)) attr_right = new Attribute(attr_found.getName(), attr_found.getValueCount());
-			}
-			
-			int size = Math.min(Math.min(attr_left.getValueCount(), attr_right.getValueCount()), output.getTupleCount());
-			output_left_attr = new Attribute(attr_left.getName(), size);
-			Attribute output_right_attr = new Attribute(attr_right.getName(), size);
-			
-			// add the attributes from the original relation except the selection attrs, A			
-			for (Attribute attr : input.getAttributes()){
-				if (!attr.equals(attr_left) && !attr.equals(attr_right)) output.addAttribute(new Attribute(attr));
-			}
-			
-			// add both attrs
-			output.addAttribute(output_left_attr);
-			output.addAttribute(output_right_attr);
+			right = input.getAttribute(predicate.getRightAttribute());
+			right_val = right.getValueCount();
+
+			// T(σA=B(R)) = T(R)/max(V(R,A),V(R,B)), V(σA=B(R), A) = V(σA=B(R), B) = min(V(R, A), V(R, B)
+			int Tr;
+			int Vr_max;
+			int Vr_min;
+
+			Tr = input.getTupleCount();
+			Vr_max = Math.max(left_val, right_val);
+			Vr_min = Math.min(left_val, right_val);
+
+			output = new Relation(Tr/Vr_max); // T(σA=B(R)) = T(R)/max(V(R,A),V(R,B))
+			val_count = Vr_min; // V(σA=B(R), A) = V(σA=B(R), B) = min(V(R, A), V(R, B)
 		}
 		
-		//System.out.println("SELECT " + output.render());
+		Iterator<Attribute> iter = input.getAttributes().iterator();
+		while (iter.hasNext()) {
+			Attribute atr = iter.next();	
+			// V(σA=B(R), A) = V(σA=B(R), B) = min(V(R, A), V(R, B)																																																			
+			if (atr.equals(left)) {
+				output.addAttribute(new Attribute(atr.getName(),val_count));
+			}
+			else if (atr.equals(right)){
+				output.addAttribute(new Attribute(atr.getName(),val_count));	
+			}
+			else {
+				output.addAttribute(new Attribute(atr));
+			}	
+		}
 		
-		// set the output to select
 		op.setOutput(output);
 		totalCost += output.getTupleCount();
 	}
