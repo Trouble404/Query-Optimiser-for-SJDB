@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package sjdb;
 import java.io.*;
@@ -15,22 +15,35 @@ public class SJDB {
 	 */
 	public static void main(String[] args) throws Exception {
 		// read serialised catalogue from file and parse
-		String catFile = args[0];
+		String catFile = "data/cat.txt";//args[0];
 		Catalogue cat = new Catalogue();
 		CatalogueParser catParser = new CatalogueParser(catFile, cat);
 		catParser.parse();
-		
+
 		// read stdin, parse, and build canonical query plan
-		QueryParser queryParser = new QueryParser(cat, new InputStreamReader(System.in));
+		QueryParser queryParser = new QueryParser(cat, new FileReader(new File("data/q4.txt")));
 		Operator plan = queryParser.parse();
-				
+
+		System.out.println("-----------------------------  PLAN  -------------------------------------------------------------");
+
+		System.out.println(plan.toString());
+
 		// create estimator visitor and apply it to canonical plan
-		//Estimator est = new Estimator();
-		//plan.accept(est);
-		
+		Estimator est = new Estimator();
+		plan.accept(est);
+
+		System.out.println("-----------------------------  OPTIMISING  -------------------------------------------------------");
+
 		// create optimised plan
-		//Optimiser opt = new Optimiser(cat);
-		//Operator optPlan = opt.optimise(plan);
+		Optimiser opt = new Optimiser(cat);
+		Operator optPlan = opt.optimise(plan);
+
+		System.out.println("-----------------------------  OPTMISE  ----------------------------------------------------------");
+
+		System.out.println(optPlan.toString());
+
+		System.out.println("CheapEST cost = " + est.getCost(optPlan));
 	}
 
 }
+
