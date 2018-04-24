@@ -12,7 +12,7 @@ public class Estimator implements PlanVisitor {
 		// empty constructor
 	}
 
-	/* 
+	/* Scan
 	 * Create output relation on Scan operator
 	 *
 	 * Example implementation of visit method for Scan operators.
@@ -33,7 +33,7 @@ public class Estimator implements PlanVisitor {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	/* 
+	/* Projection
 	 * T(πA(R)) = T(R)
 	 *
 	 * Assume that projection does not eliminate duplicate tuples
@@ -62,7 +62,7 @@ public class Estimator implements PlanVisitor {
 	
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	/* 
+	/* Selection
 	 * For predicates of the form attr=val:
 	 * T(σA=c(R)) = T(R)/V(R,A), V(σA=c(R), A) = 1
 	 *
@@ -137,25 +137,40 @@ public class Estimator implements PlanVisitor {
 		op.setOutput(output);
 		totalCost += output.getTupleCount();
 	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	/* 
+	 * Product
+     * T(R × S) = T(R)T(S)
+	 */
 	public void visit(Product op) {
 		
-		// get output from two subtrees
-		Relation left = op.getLeft().getOutput();
-		Relation right = op.getRight().getOutput();
+		// obtain value from two subtrees
+		Relation left_in;
+		Relation right_in; 
+		left_in = op.getLeft().getOutput();
+		right_in = op.getRight().getOutput();
 		
-		// output of the product.c_tuple = left.c_tuple * right.c_tuple
-		Relation output = new Relation(left.getTupleCount() * right.getTupleCount());
+		// result of product
+		Relation output;
+		int left_p;
+		int right_p;
+		left_p = left_in.getTupleCount();
+		right_p = right_in.getTupleCount();
+		output = new Relation(left_p * right_p); // c tuple = left tuple * right tuple
 		
-		// add attributes from left
-		left.getAttributes().forEach(attr -> output.addAttribute(new Attribute(attr.getName(), attr.getValueCount())));
+		// Left part: adding attributes
+		Iterator<Attribute> iter_left = left_in.getAttributes().iterator(); // Return the list of attributes contained in this relation
+		while (iter_left.hasNext()) {
+			output.addAttribute(new Attribute(iter_left.next())); //adding attributes
+		}
+        // Right part: adding attributes
+		Iterator<Attribute> iter_right = right_in.getAttributes().iterator();
+		while (iter_right.hasNext()){
+			output.addAttribute(new Attribute(iter_right.next()));
+		}
 		
-		// add attributes from right
-		right.getAttributes().forEach(attr -> output.addAttribute(new Attribute(attr.getName(), attr.getValueCount())));
-		
-		//System.out.println("PRODUCT " + output.render());
-		
-		// set the output of the product
 		op.setOutput(output);
 		totalCost += output.getTupleCount();
 	}
