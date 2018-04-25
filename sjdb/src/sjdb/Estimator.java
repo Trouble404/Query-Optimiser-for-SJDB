@@ -168,54 +168,105 @@ public class Estimator implements PlanVisitor {
         // Right part: adding attributes
 		Iterator<Attribute> iter_right = right_in.getAttributes().iterator();
 		while (iter_right.hasNext()){
-			output.addAttribute(new Attribute(iter_right.next()));
+			output.addAttribute(new Attribute(iter_right.next()));//adding attributes
 		}
 		
 		op.setOutput(output);
 		totalCost += output.getTupleCount();
 	}
 	
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	/* Join 
+	 * T(R⨝A=BS) = T(R)T(S)/max(V(R,A),V(S,B)), V(R⨝A=BS, A) = V(R⨝A=BS, B) = min(V(R, A), V(S, B))
+     * (assume that A is an attribute of R and B is an attribute of S)
+	 * Note that, for an attribute C of R that is not a join attribute, V(R⨝A=BS, C) = V(R, C)
+	 * (similarly for an attribute of S that is not a join attribute)
+	 */
 	public void visit(Join op) {
 		
-		// get output from two subtrees
-		Relation left_rel = op.getLeft().getOutput();
-		Relation right_rel = op.getRight().getOutput();
+		// obtain value from two subtrees
+		Relation left_in;
+		Relation right_in;
+		Predicate predicate;
+		Attribute attribute_left;
+		Attribute attribute_right;
+
+		left_in = op.getLeft().getOutput();
+		right_in = op.getRight().getOutput();
+		predicate = op.getPredicate(); 
+		attribute_left = new Attribute(predicate.getLeftAttribute().getName()); // left attr != null
+		attribute_right = new Attribute(predicate.getRightAttribute().getName()); // right attr != null
 		
-		Predicate p = op.getPredicate(); // the predicate
-		Attribute attr_left = new Attribute(p.getLeftAttribute().getName()); // left attr != null
-		Attribute attr_right = new Attribute(p.getRightAttribute().getName()); // right attr != null
-		
-		// get the correct valuecounts for the attributes
-		List<Attribute> all_attrs = new ArrayList<>();
-		all_attrs.addAll(left_rel.getAttributes());
-		all_attrs.addAll(right_rel.getAttributes());
-		for(Attribute attr_found : all_attrs){
-			if (attr_found.equals(attr_left)) attr_left = new Attribute(attr_found.getName(), attr_found.getValueCount());
-			if (attr_found.equals(attr_right)) attr_right = new Attribute(attr_found.getName(), attr_found.getValueCount());
+		// obtain attributes' correct value
+		List<Attribute> att_all = new ArrayList<>();
+		att_all.addAll(left_in.getAttributes()); // Appends all of the elements in the specified collection to the end of this list
+		att_all.addAll(right_in.getAttributes());
+
+		for(Attribute att1 : att_all){
+			if (att1.equals(attribute_left)) {
+				String att1_name;
+				int att1_count;
+				att1_name = att1.getName();
+				att1_count = att1.getValueCount();
+				attribute_left = new Attribute(att1_name, att1_count);
+			} 
+			if (att1.equals(attribute_right)){
+				String att1_name;
+				int att1_count;
+				att1_name = att1.getName();
+				att1_count = att1.getValueCount();
+				attribute_right = new Attribute(att1_name, att1_count);
+			} 
 		}
 		
-		// output of the join.c_tuple = T(R) * T(S) / max ( V(R,A) , V(S,B) )
-		Relation output = new Relation(left_rel.getTupleCount() * right_rel.getTupleCount() / Math.max(attr_left.getValueCount(), attr_right.getValueCount()));
+		// output of T(R⨝A=BS) = T(R)T(S)/max(V(R,A),V(S,B))
+		Relation output;
+		int Tr;
+		int Ts;
+		int Vr;
+		int Vs;
+
+		Tr = left_in.getTupleCount(); // T(R)
+		Ts = right_in.getTupleCount();// T(S)
+		Vr = attribute_left.getValueCount(); // V(R,A)
+		Vs = attribute_right.getValueCount(); // V(S,B)
+
+		output = new Relation(Tr * Ts / Math.max(Vr, Vs));
 		
-		// V(R_join, A) = V(R_join, A) = min ( V(R,A) , V(S,B) )
-		int uniq_size = Math.min(Math.min(attr_left.getValueCount(), attr_right.getValueCount()), output.getTupleCount());
-		Attribute join_attr_left = new Attribute(attr_left.getName(), uniq_size);
-		Attribute join_attr_right = new Attribute(attr_right.getName(), uniq_size);
+		// Note that, for an attribute C of R that is not a join attribute, V(R_jo,A) = V(R_jo, A) = min(V(R,A), V(S,B))
+		int size1;
+		int output_count;
+		Attribute att_left_jo;
+		Attribute att_right_jo;
+
+		output_count = output.getTupleCount();
+		size1 = Math.min(Math.min(Vr, Vs), output_count);
+		att_left_jo = new Attribute(attribute_left.getName(), size1);
+		att_right_jo = new Attribute(attribute_right.getName(), size1);
 		
-		// add the attributes from left relation
-		Iterator<Attribute> liter = left_rel.getAttributes().iterator();
-		while (liter.hasNext()) {
-			Attribute attr = liter.next();
-			if(!attr.equals(attr_left)) output.addAttribute(new Attribute(attr));
-			else output.addAttribute(join_attr_left);
+		// Left part: adding attributes
+		Iterator<Attribute> iter1 = left_in.getAttributes().iterator();
+		while (iter1.hasNext()) {
+			Attribute att = iter1.next();
+			if(!att.equals(attribute_left)) {
+				output.addAttribute(new Attribute(att));
+			} 
+			else {
+				output.addAttribute(att_left_jo);
+			}
 		}
 		
-		// add the attributes from the right relation
-		Iterator<Attribute> riter = right_rel.getAttributes().iterator();
-		while (riter.hasNext()) {
-			Attribute attr = riter.next();
-			if(!attr.equals(attr_right)) output.addAttribute(new Attribute(attr));
-			else output.addAttribute(join_attr_right);
+		// Right part: Adding attributes
+		Iterator<Attribute> iter2 = right_in.getAttributes().iterator();
+		while (iter2.hasNext()) {
+			Attribute att = iter2.next();
+			if(!att.equals(attribute_right)){
+				output.addAttribute(new Attribute(att));
+			} 
+			else {
+				output.addAttribute(att_right_jo);
+			}
 		}
 		
 		op.setOutput(output);
