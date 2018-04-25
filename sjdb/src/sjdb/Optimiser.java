@@ -1,3 +1,6 @@
+/**
+ * 
+ */
 package sjdb;
 
 import java.util.ArrayList;
@@ -6,13 +9,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 /**
- * This class will optimise an Operator plan.
- * Call optimise.
+ * This Optimiser class represents an Optimiser for planning
  * 
- * @author shakib-bin hamid
- * 
+ * @author Junming Zhang
+ *
  */
 public class Optimiser implements PlanVisitor {
 	
