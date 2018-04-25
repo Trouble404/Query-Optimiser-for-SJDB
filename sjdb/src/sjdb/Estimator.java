@@ -272,7 +272,9 @@ public class Estimator implements PlanVisitor {
 		op.setOutput(output);
 		totalCost += output.getTupleCount();
 	}
-	
+	/* 
+	 * Find the cheapset cost and plan
+	 */
 	public int getCost(Operator plan) {
 		this.totalCost = 0;
 		plan.accept(this);		
