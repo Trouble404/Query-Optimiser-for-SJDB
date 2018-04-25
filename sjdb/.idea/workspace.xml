@@ -143,7 +143,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="546" />
+    <option name="x" value="485" />
+    <option name="y" value="202" />
     <option name="width" value="1400" />
     <option name="height" value="1000" />
   </component>
@@ -190,7 +191,7 @@
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$USER_HOME$/Desktop/sjdb-comp3211-master" />
+    <property name="last_opened_file_path" value="$USER_HOME$/Desktop/sjdb" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.2" />
